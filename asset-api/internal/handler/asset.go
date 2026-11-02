@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"errors"
+// 	"errors"
 	"fmt"
 	"sync"
 	"strings"
@@ -12,6 +12,15 @@ import (
 
 	"example.com/asset-api/internal/model"
 )
+
+
+type CreateAssetRequest struct {
+    Name            string  `json:"name"`
+    ManufactureYear int     `json:"manufactureYear"`
+    EstimatedValue  float64 `json:"estimatedValue"`
+    IsWorking       bool    `json:"isWorking"`
+}
+
 
 func GetAssets(w http.ResponseWriter, r *http.Request) {
 
@@ -106,16 +115,128 @@ func NewAssetHandler() *AssetHandler{
     }
 
 
-func writeJSON(w http.ResponseWriter, status int , data any){
-        w.Header().Set("Content-Type" , "application/json")
-        w.WriteHeader(status)
-        if err :=  json.NewEncoder(w).Encode(data); err!=nil{
-        fmt.Println("JSON encoding error" , err)
+
+func writeJSON(
+    w http.ResponseWriter,
+    status int,
+    data any,
+) {
+    w.Header().Set("Content-Type", "application/json")
+    w.WriteHeader(status)
+
+    if err := json.NewEncoder(w).Encode(data); err != nil {
+        fmt.Println("JSON encoding error:", err)
+    }
+}
+
+func writeError(
+    w http.ResponseWriter,
+    status int,
+    message string,
+) {
+    writeJSON(w, status, map[string]string{
+        "error": message,
+    })
+}
+
+
+
+func (h *AssetHandler) GetAssets(
+    w http.ResponseWriter,
+    r *http.Request,
+) {
+    h.mu.RLock()
+
+    assets := make([]model.Asset, len(h.assets))
+    copy(assets, h.assets)
+
+    h.mu.RUnlock()
+
+    writeJSON(w, http.StatusOK, assets)
+}
+
+
+
+func (h *AssetHandler) GetAssetByID(
+    w http.ResponseWriter,
+    r *http.Request,
+) {
+    id := r.PathValue("id")
+
+    h.mu.RLock()
+    defer h.mu.RUnlock()
+
+    for _, asset := range h.assets {
+        if asset.ID == id {
+            writeJSON(w, http.StatusOK, asset)
+            return
         }
     }
 
-func writeError(w http.ResponseWriter, status int , message string){
-    writeJSON(w, status,  map[string] string){
-        "error" :message,
-        }
+    writeError(
+        w,
+        http.StatusNotFound,
+        "asset not found",
+    )
+}
+
+
+
+func (h *AssetHandler) CreateAsset(
+    w http.ResponseWriter,
+    r *http.Request,
+) {
+    r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+
+    decoder := json.NewDecoder(r.Body)
+    decoder.DisallowUnknownFields()
+
+    var input CreateAssetRequest
+
+    if err := decoder.Decode(&input); err != nil {
+        writeError(w, http.StatusBadRequest, "invalid JSON body")
+        return
     }
+
+    // Ensure only one JSON value was provided.
+    var extra any
+    if err := decoder.Decode(&extra); err != io.EOF {
+        writeError(w, http.StatusBadRequest, "expected one JSON object")
+        return
+    }
+
+    input.Name = strings.TrimSpace(input.Name)
+
+    if input.Name == "" {
+        writeError(w, http.StatusBadRequest, "name is required")
+        return
+    }
+
+    if input.ManufactureYear < 1 ||
+        input.ManufactureYear > 2026 {
+        writeError(w, http.StatusBadRequest, "invalid manufacturing year")
+        return
+    }
+
+    if input.EstimatedValue < 0 {
+        writeError(w, http.StatusBadRequest, "estimated value cannot be negative")
+        return
+    }
+
+    h.mu.Lock()
+
+    asset := model.Asset{
+        ID:              fmt.Sprintf("A%03d", h.nextID),
+        Name:            input.Name,
+        ManufactureYear: input.ManufactureYear,
+        EstimatedValue:  input.EstimatedValue,
+        IsWorking:       input.IsWorking,
+    }
+
+    h.nextID++
+    h.assets = append(h.assets, asset)
+
+    h.mu.Unlock()
+
+    writeJSON(w, http.StatusCreated, asset)
+}
