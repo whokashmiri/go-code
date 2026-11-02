@@ -4,6 +4,11 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"errors"
+	"fmt"
+	"sync"
+	"strings"
+	"io"
 
 	"example.com/asset-api/internal/model"
 )
@@ -69,3 +74,48 @@ func CountAssets(w http.ResponseWriter, r *http.Request) {
         log.Println("Failed to encode count:", err)
     }
 }
+
+
+
+type AssetHandler struct{
+    mu sync.RWMutex
+    assets []model.Asset
+    nextID int
+    }
+
+func NewAssetHandler() *AssetHandler{
+        return &AssetHandler{
+            assets: []model.Asset{
+               {
+                            ID:              "A001",
+                            Name:            "Toyota Camry",
+                            ManufactureYear: 2022,
+                            EstimatedValue:  65000,
+                            IsWorking:       true,
+                        },
+                        {
+                            ID:              "A002",
+                            Name:            "CAT 320",
+                            ManufactureYear: 2018,
+                            EstimatedValue:  185000,
+                            IsWorking:       true,
+                        },
+            },
+        nextID: 3,
+        }
+    }
+
+
+func writeJSON(w http.ResponseWriter, status int , data any){
+        w.Header().Set("Content-Type" , "application/json")
+        w.WriteHeader(status)
+        if err :=  json.NewEncoder(w).Encode(data); err!=nil{
+        fmt.Println("JSON encoding error" , err)
+        }
+    }
+
+func writeError(w http.ResponseWriter, status int , message string){
+    writeJSON(w, status,  map[string] string){
+        "error" :message,
+        }
+    }
