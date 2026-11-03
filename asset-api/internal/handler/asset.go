@@ -282,4 +282,80 @@ func decodeUpdateRequest(w http.ResponseWriter , r *http.Request,)(UpdateAssetRe
     }
 
 
+    for key , raw :=  range feilds{
+        if bytes.Equal(bytes.TrimSpace(raw), []byte("null")){
+        return input , fmt.Errorf("feild %s cannot be null" , key)
+        }
+    }
+
+    decoder := json.NewEncoder(bytes.NewEncoder(body))
+    decoder.DisallowUnknownFields()
+
+    if  err:= decoder.Decode(&input); err != nil {
+     return input , err
+    }
+
+    var extra any
+
+    if err := decoder.Decode(&extra); err != io.EOF{
+        return input, errors.New("expected one JSON object")
+    }
+
+    return input , nil
+
+    }
+
+
+func (h *AssetHandler) ReplaceAsset(w http.ResponseWriter , r *Request,){
+    id := r.PathValue("id")
+    input , err : decodeUpdateRequest(w , r)
+    if err != nil {
+        writeError(w, http.StatusBadRequest, "invalid JSON :"+err.Error())
+        return
+    }
+
+    if input.name== nil ||
+        input.ManufactureYear == nil ||
+        input.EstimatedValue == nil ||
+        input.IsWorking ==nil {
+        writeError(w, http.StatusBadRequest , "All fields are required")
+        return
+        }
+
+        name := strings.TrimSpace(*input.Name)
+
+        if name == "" {
+        writeError(w.http.StatusBadRequest , "name is required")
+        return
+        }
+        if *input.ManufactureYear < 1 || *input.ManufactureYear > 2026{
+            writeError(w, http.StatusBadRequest, "invalid manufacture year" )
+            return
+        }
+     if *input.EstimatedValue < 0 {
+            writeError(w, http.StatusBadRequest, "invalid estimated value")
+            return
+        }
+
+        replacement := model.Asset{
+        ID:              id,
+        Name:            name,
+        ManufactureYear: *input.ManufactureYear,
+        EstimatedValue:  *input.EstimatedValue,
+        IsWorking:       *input.IsWorking,
+        }
+
+         h.mu.Lock()
+
+         for i:= range h.assets{
+         if h.assets[i].ID == id{
+            h.assets[i] = replacement
+            h.mu.Unlock()
+
+            writeJSON(w, http.StatusOK, replacement)
+            return
+
+         }
+         }
+
     }
