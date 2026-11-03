@@ -358,4 +358,8 @@ func (h *AssetHandler) ReplaceAsset(w http.ResponseWriter , r *Request,){
          }
          }
 
+        h.mu.Unlock()
+
+         writeError(w, http.StatusNotFound, "asset not found")
+
     }
