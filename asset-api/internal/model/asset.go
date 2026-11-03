@@ -7,3 +7,12 @@ type Asset struct {
 	EstimatedValue  float64 `json:"estimatedValue"`
 	IsWorking       bool    `json:"isWorking"`
 }
+
+
+type UpdateAssetRequest struct {
+
+	Name            *string  `json:"name"`
+	ManufactureYear *int     `json:"manufactureYear"`
+	EstimatedValue  *float64 `json:"estimatedValue"`
+	IsWorking       *bool    `json:"isWorking"`
+}
