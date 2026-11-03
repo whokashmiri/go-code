@@ -363,3 +363,102 @@ func (h *AssetHandler) ReplaceAsset(w http.ResponseWriter , r *Request,){
          writeError(w, http.StatusNotFound, "asset not found")
 
     }
+
+
+
+func (h *AssetHandler) PatchAsset(
+    w http.ResponseWriter,
+    r *http.Request,
+) {
+    id := r.PathValue("id")
+
+    input, err := decodeUpdateRequest(w, r)
+    if err != nil {
+        writeError(w, http.StatusBadRequest, "invalid JSON: "+err.Error())
+        return
+    }
+
+    if input.Name == nil &&
+        input.ManufactureYear == nil &&
+        input.EstimatedValue == nil &&
+        input.IsWorking == nil {
+        writeError(w, http.StatusBadRequest, "no fields to update")
+        return
+    }
+
+    if input.Name != nil &&
+        strings.TrimSpace(*input.Name) == "" {
+        writeError(w, http.StatusBadRequest, "name cannot be empty")
+        return
+    }
+
+    if input.ManufactureYear != nil &&
+        (*input.ManufactureYear < 1 ||
+            *input.ManufactureYear > 2026) {
+        writeError(w, http.StatusBadRequest, "invalid manufacturing year")
+        return
+    }
+
+    if input.EstimatedValue != nil &&
+        *input.EstimatedValue < 0 {
+        writeError(w, http.StatusBadRequest, "invalid estimated value")
+        return
+    }
+
+    h.mu.Lock()
+
+    for i := range h.assets {
+        if h.assets[i].ID != id {
+            continue
+        }
+
+        asset := &h.assets[i]
+
+        if input.Name != nil {
+            asset.Name = strings.TrimSpace(*input.Name)
+        }
+
+        if input.ManufactureYear != nil {
+            asset.ManufactureYear = *input.ManufactureYear
+        }
+
+        if input.EstimatedValue != nil {
+            asset.EstimatedValue = *input.EstimatedValue
+        }
+
+        if input.IsWorking != nil {
+            asset.IsWorking = *input.IsWorking
+        }
+
+        updated := *asset
+
+        h.mu.Unlock()
+
+        writeJSON(w, http.StatusOK, updated)
+        return
+    }
+
+    h.mu.Unlock()
+
+    writeError(w, http.StatusNotFound, "asset not found")
+}
+
+
+func (h *AssetHandler) DeleteAsset(w http.ResponseWriter , r *http.Request){
+    id := r.PathValue("id")
+    h.mu.Lock()
+    for i , asset:= range h.assets{
+            if asset.ID = id{
+                h.assets = append(
+                    h.assets[:i]
+                    h.assets[i+1]...,
+                    )
+                h.mu.Unlock()
+                w.WriteHeader(http.StatusNoContent)
+                return
+                }
+        }
+
+        h.mu.Unlock()
+        writeError(w , http.StatusNotFound, "asset not found")
+    }

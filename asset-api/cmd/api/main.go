@@ -31,6 +31,20 @@ func main() {
         "POST /api/assets",
         assetHandler.CreateAsset,
     )
+mux.HandleFunc(
+    "PUT /api/assets/{id}",
+    assetHandler.ReplaceAsset,
+)
+
+mux.HandleFunc(
+    "PATCH /api/assets/{id}",
+    assetHandler.PatchAsset,
+)
+
+mux.HandleFunc(
+    "DELETE /api/assets/{id}",
+    assetHandler.DeleteAsset,
+)
 
     server := &http.Server{
         Addr:              ":8080",
