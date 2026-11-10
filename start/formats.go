@@ -13,7 +13,7 @@ year := 2025
 fmt.Printf("Asset: %s, Year: %d", name, year)
 
 assetName :=  "Crane"
-year := 22025
+year = 2025
 price := 25484.4500
 isWorking :=  true
 
