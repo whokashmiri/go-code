@@ -1,9 +1,9 @@
 package main
 
 import (
-	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"strconv"
 	"time"
