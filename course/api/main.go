@@ -1,9 +1,12 @@
 package main
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -53,4 +56,28 @@ func getOneCourses(w http.ResponseWriter, r *http.Request) {
 		fmt.Print("No course found")
 	}
 
+}
+
+func createCourse(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("create a  Course </h1>")
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Body == nil {
+		json.NewEncoder(w).Encode("Please send some data")
+	}
+	json.NewEncoder(w).Encode(courses)
+
+	var course Course
+	_ = json.NewDecoder(r.Body).Decode(&course)
+
+	if course.IsEmpty() {
+		json.NewEncoder(w).Encode("Please send some data")
+		return
+	}
+
+	rand.Seed(time.Now().UnixNano())
+	course.CourseId = strconv.Itoa(rand.Intn(100))
+	courses = append(courses, course)
+	json.NewEncoder(w).Encode(course)
+	return
 }
