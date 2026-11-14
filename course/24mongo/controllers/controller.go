@@ -20,7 +20,7 @@ var collection *mongo.Collection
 func init() {
 	clientOption := options.Client().ApplyURI(connectionString)
 
-	client, err := mongo.Connect(context.TODO(), clientOption)
+	client, err := mongo.Connect(context.Background(), clientOption)
 
 	if err != nil {
 		log.Panic(err)
