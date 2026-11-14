@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"mongo/models"
 
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
@@ -19,13 +20,22 @@ var collection *mongo.Collection
 func init() {
 	clientOption := options.Client().ApplyURI(connectionString)
 
-	client , err := mongo.Connect(context.TODO(), clientOption)
+	client, err := mongo.Connect(context.TODO(), clientOption)
 
-	if err!= nil{
+	if err != nil {
 		log.Panic(err)
 	}
 	fmt.Println("mongo connected")
 
-	collection =  client.Database(db).Collection(colName)
+	collection = client.Database(db).Collection(colName)
 	fmt.Println("Collection is ready")
+}
+
+func insertOneMovie(movie models.Netflix) {
+	inserted, err := collection.InsertOne(context.Background(), movie)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("movie inserted", inserted.InsertedID)
 }
