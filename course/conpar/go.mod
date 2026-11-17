@@ -1,0 +1,3 @@
+module conpar
+
+go 1.27.3
